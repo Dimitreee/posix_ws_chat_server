@@ -1,8 +1,9 @@
+import {Socket} from "socket.io";
+import {io} from "../server";
 import uid from "uid";
-import {Server, Socket} from "socket.io";
 
-class ChatRoom {
-    constructor(private server:Server) {
+class Chat {
+    constructor(private id:string) {
     }
 
     public enter(socket:Socket) {
@@ -11,10 +12,6 @@ class ChatRoom {
         this.sockets.set(socket.id, socket);
         socket.on("leave", () => this.leave(socket));
         socket.on("message", (message) => this.broadcast(message));
-    }
-
-    public getId() {
-        return this.id
     }
 
     private leave(socket:Socket) {
@@ -27,9 +24,19 @@ class ChatRoom {
     }
 
     private broadcast(message) {
-        this.server.to(this.id).send(message);
+        this.socket.to(this.id).send(message);
     }
 
+    private socket:Socket = io;
+
     private sockets:Map<string, Socket> = new Map();
-    private id:string = uid(32);
 }
+
+export function createChat() {
+    const id = uid(32);
+    const chat = new Chat(id);
+
+    chats.set(id, chat);
+}
+
+const chats = new Map();
