@@ -1,9 +1,10 @@
 import {Socket} from "socket.io";
-import {io} from "../server";
+import {io} from "../index";
 import uid from "uid";
 
 class Chat {
     constructor(private id:string) {
+        console.log(`Chat with ${id} created.`)
     }
 
     public enter(socket:Socket) {
@@ -39,4 +40,12 @@ export function createChat() {
     chats.set(id, chat);
 }
 
-const chats = new Map();
+export function enterChat(id:string, socket:Socket) {
+    const chat = chats.get(id);
+
+    if (chat) {
+        chat.enter(socket)
+    }
+}
+
+const chats:Map<string, Chat> = new Map();

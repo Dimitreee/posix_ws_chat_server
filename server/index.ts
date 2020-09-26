@@ -1,5 +1,5 @@
 import express from "express";
-import {WSProxy} from "./src";
+import {WsProxy} from "./src/WsProxy";
 
 const http = require("http").createServer(express());
 const Server = require("socket.io");
@@ -11,7 +11,7 @@ const io_options =  {
 };
 
 export const io = new Server(http, io_options);
-new WSProxy(io).init();
+new WsProxy(io).init();
 
 http.listen(3000, () => {
     console.log("Server ready");
