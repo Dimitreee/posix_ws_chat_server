@@ -1,80 +1,74 @@
-const io = require("socket.io-client");
-const http = require("http");
-const ioBack = require("socket.io");
+import SocketIO, {Socket} from "socket.io";
+import Http from "http";
+import SocketIOClient from "socket.io-client";
+import {WsProxy} from "./WsProxy";
 
-let socket;
-let httpServer;
-let httpServerAddr;
-let ioServer;
+describe("WsProxy", () => {
+    describe("Working with registry", () => {
+        it("Should register socket on connection", (done) => {
+            const store = new Map();
 
-/**
- * Setup WS & HTTP servers
- */
-beforeAll((done) => {
-    httpServer = http.createServer().listen();
-    httpServerAddr = httpServer.listen().address();
-    ioServer = ioBack(httpServer);
-    done();
+            const {connectServer, connectClient} = createHelpers();
+            const server = connectServer();
+            const proxy = new WsProxy(server, store);
+
+            proxy.init();
+
+            connectClient().on("connected", (id) => {
+                expect(store.has(id)).toBeTruthy();
+                done();
+            })
+        });
+
+        it("Should detach socket from store on disconnect", (done) => {
+            function createStore() {
+                const in_memory_store:Map<string, Socket> = new Map();
+
+                return {
+                    set: (key, value) => {
+                        in_memory_store.set(key, value)
+                    },
+                    delete: (key) =>  {
+                        done();
+                        in_memory_store.delete(key);
+                    },
+                }
+            }
+
+            const {connectServer, connectClient} = createHelpers();
+            const server = connectServer();
+            const proxy = new WsProxy(server, createStore());
+
+            proxy.init();
+
+            const client = connectClient();
+            client.emit("end", {});
+        })
+    })
 });
 
-/**
- *  Cleanup WS & HTTP servers
- */
-afterAll((done) => {
-    ioServer.close();
-    httpServer.close();
-    done();
-});
+function createHelpers() {
+    const http_server = Http.createServer();
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    const { address, port } = http_server.listen().address();
 
-/**
- * Run before each test
- */
-beforeEach((done) => {
-    // Setup
-    // Do not hardcode server port and address, square brackets are used for IPv6
-    socket = io.connect(`http://[${httpServerAddr.address}]:${httpServerAddr.port}`, {
-        'reconnection delay': 0,
-        'reopen delay': 0,
-        'force new connection': true,
-        transports: ['websocket'],
+    const io_options =  {
+        pingInterval: 10000,
+        pingTimeout: 5000,
+        cookie: false,
+    };
+
+    const connectServer = () => new SocketIO(http_server, io_options);
+    const connectClient = () => SocketIOClient.connect(`http://[${address}]:${port}`, {
+        transports: ["websocket"],
     });
-    socket.on('connect', () => {
-        done();
-    });
-});
 
-/**
- * Run after each test
- */
-afterEach((done) => {
-    // Cleanup
-    if (socket.connected) {
-        socket.disconnect();
+    const closeHttpServer = () => http_server.close();
+
+    return {
+        connectServer,
+        connectClient,
+        closeHttpServer,
     }
-    done();
-});
-
-
-describe('basic socket.io example', () => {
-    test('should communicate', (done) => {
-        // once connected, emit Hello World
-        ioServer.emit('echo', 'Hello World');
-        socket.once('echo', (message) => {
-            // Check that the message matches
-            expect(message).toBe('Hello World');
-            done();
-        });
-        ioServer.on('connection', (mySocket) => {
-            expect(mySocket).toBeDefined();
-        });
-    });
-    test('should communicate with waiting for socket.io handshakes', (done) => {
-        // Emit sth from Client do Server
-        socket.emit('examlpe', 'some messages');
-        // Use timeout to wait for socket.io server handshakes
-        setTimeout(() => {
-            // Put your server side expect() here
-            done();
-        }, 50);
-    });
-});
+}

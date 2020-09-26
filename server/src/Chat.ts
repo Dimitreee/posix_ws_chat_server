@@ -1,6 +1,7 @@
-import {Socket} from "socket.io";
+import {Server, Socket} from "socket.io";
 import {io} from "../index";
 import uid from "uid";
+import {SocketEvent} from "./types";
 
 class Chat {
     constructor(private id:string) {
@@ -11,8 +12,8 @@ class Chat {
         socket.join(this.id);
 
         this.sockets.set(socket.id, socket);
-        socket.on("leave", () => this.leave(socket));
-        socket.on("message", (message) => this.broadcast(message));
+        socket.on(SocketEvent.Message, (message) => this.broadcast(message));
+        socket.on(SocketEvent.Leave, () => this.leave(socket));
     }
 
     private leave(socket:Socket) {
@@ -28,24 +29,7 @@ class Chat {
         this.socket.to(this.id).send(message);
     }
 
-    private socket:Socket = io;
+    private socket:Server = io;
 
     private sockets:Map<string, Socket> = new Map();
 }
-
-export function createChat() {
-    const id = uid(32);
-    const chat = new Chat(id);
-
-    chats.set(id, chat);
-}
-
-export function enterChat(id:string, socket:Socket) {
-    const chat = chats.get(id);
-
-    if (chat) {
-        chat.enter(socket)
-    }
-}
-
-const chats:Map<string, Chat> = new Map();

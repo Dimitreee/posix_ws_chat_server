@@ -1,16 +1,12 @@
-export enum EventActions {
-    CreateChat = "create_chat",
-    EnterChat = "enter_chat",
-    DeleteChat = "delete_chat",
-}
-
-export enum EventType {
+export enum SocketEvent {
+    Connection = "connection",
+    Disconnect = "disconnect",
+    End = "end",
+    Leave = "leave",
     Message = "message",
-    Action = "action",
 }
 
 export type Message = {
-    type: EventType;
-    payload: string|undefined;
-    meta: string|undefined;
-};
+    room_id: string;
+    message: string;
+}
